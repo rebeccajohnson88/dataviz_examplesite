@@ -1,16 +1,23 @@
 [
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
+    "objectID": "geovisualization.html",
+    "href": "geovisualization.html",
+    "title": "Geospatial data in Python",
     "section": "",
-    "text": "About this site\n\n1 + 1\n\n[1] 2"
+    "text": "Geovisualization\nHere, I’ll walk you through the code for a geovisualization.\n\nlibrary(tidyverse) \n\n── Attaching packages ─────────────────────────────────────── tidyverse 1.3.2 ──\n✔ ggplot2 3.4.4     ✔ purrr   1.0.2\n✔ tibble  3.2.1     ✔ dplyr   1.1.4\n✔ tidyr   1.3.0     ✔ stringr 1.5.1\n✔ readr   2.1.5     ✔ forcats 0.5.2\n\n\nWarning: package 'readr' was built under R version 4.2.3\n\n\nWarning: package 'dplyr' was built under R version 4.2.3\n\n\nWarning: package 'stringr' was built under R version 4.2.3\n\n\n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\n\nlibrary(stringr)\nlibrary(leaflet)\n\nWarning: package 'leaflet' was built under R version 4.2.3\n\nlibrary(leaflet.extras)\nlibrary(tigris)\n\nTo enable caching of data, set `options(tigris_use_cache = TRUE)`\nin your R script or .Rprofile.\n\nlibrary(sf)\n\nWarning: package 'sf' was built under R version 4.2.3\n\n\nLinking to GEOS 3.11.0, GDAL 3.5.3, PROJ 9.1.0; sf_use_s2() is TRUE\n\noptions(tigris_use_cache = TRUE)\n\n## clean vote data\nvote_returns = read.csv(\"1976-2020-president.csv\")\nvote_focus &lt;- vote_returns %&gt;%\n          filter(year == 2020 & \n                party_simplified == \"REPUBLICAN\") %&gt;%\n          mutate(STATEFP = str_pad(state_fips, width = 2, side = \"left\", pad = \"0\"),\n                 vote_share = candidatevotes/totalvotes) \n\n## load state polygons\nstates &lt;- states(year = 2020)\nstates_leaflet &lt;- states %&gt;% \n            st_transform(crs = 4326)\n\n## merge state polygons with vote share\nstate_w_votefocus &lt;- states_leaflet %&gt;%\n            inner_join(vote_focus, by = \"STATEFP\")\n\n## create color palette\nbins &lt;- quantile(vote_focus$vote_share, probs = seq(from = 0, to = 1, by = 0.2))\npalette &lt;- colorBin(\"YlOrRd\", domain = state_w_votefocus$vote_share, bins = bins)\n\n## create labels for each state\nstate_labels &lt;- sprintf(\"&lt;strong&gt;State:&lt;/strong&gt; %s&lt;br/&gt;&lt;strong&gt;Republican Vote Share:&lt;/strong&gt; %.2f\",\n                  state_w_votefocus$NAME,\n                  state_w_votefocus$vote_share) %&gt;%\n            lapply(htmltools::HTML)\n\n## create choropleth map\nleaflet(state_w_votefocus) %&gt;%\n    addProviderTiles(\"OpenStreetMap\",\n                     group = \"OpenStreetMap\") %&gt;%\n    setView(-96, 37.8, 4) %&gt;%\n    addPolygons(fillColor = ~palette(vote_share),\n                weight = 2,\n                opacity = 1,\n                color = \"white\",\n                fillOpacity = 0.8,\n    highlightOptions = highlightOptions(\n    weight = 5,\n    color = \"black\",\n    fillOpacity = 0.8,\n    bringToFront = TRUE),\n    label = state_labels) %&gt;%\n    addLegend(pal = palette, values = ~vote_share, opacity = 0.8, \n              title = \"Republican vote share\",\n    position = \"bottomright\")"
   },
   {
     "objectID": "index.html",
     "href": "index.html",
     "title": "Data Science Portfolio: RJ",
     "section": "",
-    "text": "Welcome to my Data Science Portfolio for PPOL 5202! Here, I’ll display various interactive visualizations, alongside code to produce those visualizations."
+    "text": "Welcome to my Data Science Portfolio for PPOL 5202! Here, I’ll display various interactive visualizations, alongside code to produce those visualizations.\nThese visualizations include:\n\n[A choropleth map of state polling results](geovisualization.qmd)"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site\n\n1 + 1\n\n[1] 2"
   }
 ]
