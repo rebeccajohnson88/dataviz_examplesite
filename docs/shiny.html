@@ -147,80 +147,70 @@ ul.task-list li input[type="checkbox"] {
 #|   Please set `embed-resources: false` in your metadata.
 #| standalone: true
 #| viewerHeight: 600
-#| code-fold: true
-#| code-summary: "Show the code"
+
 
 library(shiny)
 library(tidyverse)
-library(arrow)
+library(leaflet)
+library(leaflet.extras)
+library(htmltools)
+library(sf)
+library(here)
 
-flood_claims &lt;- read_parquet("FimaNfipClaims.parquet")
+l &lt;- sf::st_read("Liquor_Licenses.geojson")) %&gt;%
+  st_transform(crs = 4326)
+l$long &lt;- st_coordinates(l)[, 1]
 
-# Define UI for application that draws a histogram
+l$lat &lt;- st_coordinates(l)[, 2]
+
+
 ui &lt;- fluidPage(
-
-    # Application title
-    titlePanel("FEMA Flood Claims"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-          selectInput(inputId= "input_state",
-                       label = "State to show:",
-                       choices = sort(unique(flood_claims$state)),
-                       selected = "FL"),
-          dateRangeInput(inputId = "input_date",
-                        label = "Date Range",
-                        start = "1978-01-01",
-                        end = "2024-09-01",
-                        min = min(flood_claims$dateOfLoss),
-                        max = max(flood_claims$dateOfLoss),
-                        startview = "year")
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-            plotOutput("year_plot"),
-           tableOutput("agg_table")
-        )
+  # Application title
+  titlePanel("Map of Liquor Licenses in DC"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId= "input_type",
+                  label = "Type of establishment:",
+                  choices = sort(unique(l$TYPE)),
+                  selected = "Tavern",
+                  multiple = TRUE)
+    ),
+    mainPanel(
+      # Leaflet output
+      leafletOutput("map")
     )
+  )
+  
 )
 
 # Define server logic required to draw a histogram
 server &lt;- function(input, output) {
-
-    d_agg &lt;- reactive({
-        flood_claims %&gt;%
-        filter(state == input$input_state &amp;
-              dateOfLoss &gt;= input$input_date[1],
-              dateOfLoss &lt;= input$input_date[2]) %&gt;%
-       group_by(yearOfLoss) %&gt;%
-      summarise(count_claims = n())
-    })
+  
+  d &lt;- reactive({
+    l %&gt;%
+      filter(TYPE %in% input$input_type)
     
-    output$agg_table &lt;- renderTable({
-      d_agg()
-    })
-    
-    output$year_plot &lt;- renderPlot({
-      ggplot(d_agg(), aes(x = yearOfLoss, y = count_claims)) +
-        geom_point() +
-        geom_line() +
-        theme_bw() +
-        xlab("Year of claim") +
-        ylab("Count of claims") +
-        scale_x_continuous(breaks = seq(from = min(d_agg()$yearOfLoss), to = 
-                                          max(d_agg()$yearOfLoss),
-                                        by = 2)) +
-        ggtitle(sprintf("Count of flood insurance claims per year in %s",
-                      input$input_state)) 
-    })
+  })
+  
+  output$map &lt;- renderLeaflet({
+    leaflet() %&gt;%
+      addProviderTiles("OpenStreetMap",
+                       group = "OpenStreetMap")  %&gt;%
+      addCircleMarkers(data = 
+                         d(), lat = ~lat,
+                       lng = ~long,
+                       color = 'darkgreen', radius = 2,
+                       clusterOptions = markerClusterOptions(),
+                       label = sprintf("Trade name: %s&lt;br&gt;Type of location: %s",
+                                       d()$TRADE_NAME,
+                                       d()$TYPE) %&gt;%
+                         lapply(htmltools::HTML))
+  })
+  
 }
 
 # Run the application 
-shinyApp(ui = ui, server = server)
-
-</code></pre>
+shinyApp(ui = ui, server = server)</code></pre>
 
 
 
